@@ -1,0 +1,57 @@
+#!/bin/sh
+#
+# PROVIDE: nzbget
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
+# to enable this service:
+#
+# nzbget_enable (bool): Set to NO by default.
+#                       Set it to YES to enable it.
+
+. /etc/rc.subr
+
+name=nzbget
+rcvar=nzbget_enable
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+restart_cmd="${name}_restart"
+reload_cmd="${name}_reload"
+
+extra_commands="reload"
+
+load_rc_config ${name}
+: ${nzbget_enable:=NO}
+: ${nzbget_config:="/usr/local/nzbget/config/nzbget.conf"}
+
+command=/usr/local/nzbget/nzbget
+command_args="-D -c ${nzbget_config}"
+
+pidfile="/usr/local/nzbget/nzbget.lock"
+
+nzbget_start()
+{
+    ${command} ${command_args}
+    echo "${name} started."
+}
+
+nzbget_stop()
+{
+    ${command} -Q
+}
+
+nzbget_restart()
+{
+    ${command} -Q
+    sleep 5
+    ${command} ${command_args}
+}
+
+nzbget_reload()
+{
+    ${command} -O
+}
+
+run_rc_command "$1"
