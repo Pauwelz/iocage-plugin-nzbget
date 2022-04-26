@@ -1,57 +1,62 @@
 #!/bin/sh
 #
+# Author: Mark Felder <feld@FreeBSD.org>
+
 # PROVIDE: nzbget
 # REQUIRE: LOGIN
 # KEYWORD: shutdown
-#
-# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
-# to enable this service:
-#
-# nzbget_enable (bool): Set to NO by default.
-#                       Set it to YES to enable it.
+
+# Add the following lines to /etc/rc.conf to enable nzbget:
+# nzbget_enable="YES"
 
 . /etc/rc.subr
 
-name=nzbget
+name="nzbget"
 rcvar=nzbget_enable
 
-start_cmd="${name}_start"
-stop_cmd="${name}_stop"
-restart_cmd="${name}_restart"
-reload_cmd="${name}_reload"
+load_rc_config $name
 
-extra_commands="reload"
+: ${nzbget_enable="NO"}
+: ${nzbget_user:="nzbget"}
+: ${nzbget_data_dir:="/usr/local/nzbget"}
+: ${nzbget_exec_dir:="/usr/local/share/nzbget/bin"}
 
-load_rc_config ${name}
-: ${nzbget_enable:=NO}
-: ${nzbget_config:="/usr/local/nzbget/config/nzbget.conf"}
+pidfile="${nzbget_data_dir}/nzbget.pid"
 
 command=/usr/local/nzbget/nzbget
-command_args="-D -c ${nzbget_config}"
+command_args="-D -c /usr/local/nzbget/config/nzbget.conf"
 
-pidfile="/usr/local/nzbget/nzbget.lock"
+start_precmd="${name}_precmd"
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+
+
+nzbget_precmd()
+{
+        install -d -o ${nzbget_user} -m 755 /var/run/${name}
+}
 
 nzbget_start()
 {
-    ${command} ${command_args}
-    echo "${name} started."
+    if [ -e ${pidfile} ];
+    then
+        echo "${name} is already running"
+    else
+        echo "Starting ${name}"
+        /usr/sbin/daemon -u ${nzbget_user} -p ${pidfile} ${command} ${command_args}
+    fi
 }
 
 nzbget_stop()
 {
-    ${command} -Q
-}
-
-nzbget_restart()
-{
-    ${command} -Q
-    sleep 5
-    ${command} ${command_args}
-}
-
-nzbget_reload()
-{
-    ${command} -O
+    if [ -e ${pidfile} ];
+    then
+        echo "Stopping ${name}"
+        kill `cat ${pidfile}`;
+        sleep 1
+    else
+        echo "${name} is not running"
+    fi
 }
 
 run_rc_command "$1"
